@@ -3,6 +3,7 @@ import argparse
 import datetime
 import json
 import pandas as pd
+import numpy as np
 import torch
 
 import utils
@@ -33,53 +34,108 @@ parser.add_argument("--similarity_fn", type=str, default="soft_wpmi", choices=["
 
 parser.parse_args()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parser.parse_args()
     args.target_layers = args.target_layers.split(",")
-    
-    similarity_fn = eval("similarity.{}".format(args.similarity_fn))
-    
-    utils.save_activations(clip_name = args.clip_model,
-                           target_name = args.target_model,
-                           target_layers = args.target_layers,
-                           d_probe = args.d_probe,
-                           concept_set = args.concept_set,
-                           batch_size = args.batch_size,
-                           device = args.device,
-                           pool_mode=args.pool_mode,
-                           save_dir = args.activation_dir)
-    
-    outputs = {"layer":[], "unit":[], "description":[], "similarity":[]}
-    with open(args.concept_set, 'r') as f: 
-        words = (f.read()).split('\n')
-    
+
+    # similarity_fn = eval("similarity.{}".format(args.similarity_fn))
+    similarity_fn = getattr(similarity, args.similarity_fn)
+
+    # NOTE save activations
+    print("save_activations...")
+    utils.save_activations(
+        clip_name=args.clip_model,
+        target_name=args.target_model,
+        target_layers=args.target_layers,
+        d_probe=args.d_probe,
+        concept_set=args.concept_set,
+        batch_size=args.batch_size,
+        device=args.device,
+        pool_mode=args.pool_mode,
+        save_dir=args.activation_dir,
+    )
+
+    outputs = {
+        "layer": [],
+        "unit": [],
+        "description": [],
+        "similarity": [],
+    }
+
+    # Read concept set
+    with open(args.concept_set, "r") as f:
+        words = (f.read()).split("\n")
+
+    print("getting neuron-concept similarities...")
+    all_layer_similarities = []
     for target_layer in args.target_layers:
-        save_names = utils.get_save_names(clip_name = args.clip_model, target_name = args.target_model,
-                                  target_layer = target_layer, d_probe = args.d_probe,
-                                  concept_set = args.concept_set, pool_mode = args.pool_mode,
-                                  save_dir = args.activation_dir)
-        target_save_name, clip_save_name, text_save_name = save_names
+        target_save_name, clip_save_name, text_save_name = utils.get_save_names(
+            clip_name=args.clip_model,
+            target_name=args.target_model,
+            target_layer=target_layer,
+            d_probe=args.d_probe,
+            concept_set=args.concept_set,
+            pool_mode=args.pool_mode,
+            save_dir=args.activation_dir,
+        )
 
         similarities = utils.get_similarity_from_activations(
-            target_save_name, clip_save_name, text_save_name, similarity_fn, return_target_feats=False, device=args.device
+            target_save_name,
+            clip_save_name,
+            text_save_name,
+            similarity_fn,
+            return_target_feats=False,
+            device=args.device,
+        )  # neuron x vocabulary_size
+        print(target_layer, similarities.shape)
+        all_layer_similarities.append(
+            dict(
+                similarities=similarities.detach().cpu(),
+                layer=target_layer,
+            )
         )
-        vals, ids = torch.max(similarities, dim=1)
-        
+
+        # sys.exit(0)
+        # take argmax
+        # vals, ids = torch.max(similarities, dim=1)
         del similarities
         torch.cuda.empty_cache()
-        
-        descriptions = [words[int(idx)] for idx in ids]
-        
-        outputs["unit"].extend([i for i in range(len(vals))])
-        outputs["layer"].extend([target_layer]*len(vals))
-        outputs["description"].extend(descriptions)
-        outputs["similarity"].extend(vals.cpu().numpy())
-        
-    df = pd.DataFrame(outputs)
-    if not os.path.exists(args.result_dir):
-        os.mkdir(args.result_dir)
-    save_path = "{}/{}_{}".format(args.result_dir, args.target_model, datetime.datetime.now().strftime("%y_%m_%d_%H_%M"))
-    os.mkdir(save_path)
-    df.to_csv(os.path.join(save_path,"descriptions.csv"), index=False)
-    with open(os.path.join(save_path, "args.txt"), 'w') as f:
-        json.dump(args.__dict__, f, indent=2)
+        # descriptions = [words[int(idx)] for idx in ids]
+        # outputs["unit"].extend([i for i in range(len(vals))])
+        # outputs["layer"].extend([target_layer] * len(vals))
+        # outputs["description"].extend(descriptions)
+        # outputs["similarity"].extend(vals.cpu().numpy())
+
+    dir_out = f"my_data/{args.target_model}"
+    os.makedirs(dir_out, exist_ok=True)
+    fn_out = f"{dir_out}/all_layer_similarities.pt"
+    print(f"saving neuron-concept similarities to {fn_out}")
+    torch.save(all_layer_similarities, fn_out)
+
+    # Save neuron-concept similarities per layer as numpy
+    for sim in all_layer_similarities:
+        layer_name = sim["layer"]
+
+        sim = sim["similarities"]
+        fn = f"{dir_out}/neuron_concept_similarities_{layer_name}.npy"
+        np.save(fn, sim.numpy())
+
+        # get top 100 concepts per neuron
+        top = 100
+        sim = sim.argsort(descending=True)
+        sim = sim[:, :top]  # get top
+        sim = sim.type(torch.int32)
+        fn = f"{dir_out}/concepts_top{top}_{layer_name}.npy"
+        np.save(fn, sim.numpy())
+
+    # # save as csv
+    # df = pd.DataFrame(outputs)
+    # if not os.path.exists(args.result_dir):
+    # os.mkdir(args.result_dir)
+    # timestamp = datetime.datetime.now().strftime('%y_%m_%d_%H_%M')
+    # save_path = f"{args.result_dir}/{args.target_model}_{timestamp}"
+    # os.mkdir(save_path)
+    # df.to_csv(os.path.join(save_path, "descriptions.csv"), index=False)
+
+    # with open(os.path.join(save_path, "args.txt"), "w") as f:
+    # json.dump(args.__dict__, f, indent=2)
