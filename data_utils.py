@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 from torchvision import datasets, transforms, models
 
-DATASET_ROOTS = {"imagenet_val": "YOUR_PATH/ImageNet_val/",
+DATASET_ROOTS = {"imagenet_val": "data/ImageNet_val/",
                 "broden": "data/broden1_224/images/"}
 
 
@@ -28,7 +28,12 @@ def get_target_model(target_name, device):
     elif target_name == 'custom_resnet50_random_split0':
         target_model = models.resnet50(num_classes=500).to(device)
         state_dict = torch.load('data/custom_resnet50_random_split0.ckpt', map_location=device)['state_dict']
-        target_model.load_state_dict(state_dict)
+        new_state_dict = {}
+        for key in state_dict:
+            if key.startswith('model.'):
+                new_state_dict[key[6:]] = state_dict[key]
+
+        target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = models.ResNet50_Weights.DEFAULT.transforms()
     elif "vit_b" in target_name:
