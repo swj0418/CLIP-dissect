@@ -4,6 +4,7 @@ from tqdm import tqdm
 from scipy import stats
 from matplotlib import pyplot as plt
 
+
 def cos_similarity_cubed(clip_feats, target_feats, device='cuda', batch_size=10000, min_norm=1e-3):
     """
     Substract mean from each vector, then raises to third power and compares cos similarity
@@ -30,6 +31,7 @@ def cos_similarity_cubed(clip_feats, target_feats, device='cuda', batch_size=100
             similarities.append(torch.cat(curr_similarities, dim=1))
     return torch.cat(similarities, dim=0)
 
+
 def cos_similarity(clip_feats, target_feats, device='cuda'):
     with torch.no_grad():
         clip_feats = clip_feats / torch.norm(clip_feats, p=2, dim=0, keepdim=True)
@@ -45,6 +47,7 @@ def cos_similarity(clip_feats, target_feats, device='cuda'):
                 curr_similarities.append(curr_target @ clip_feats[:, c_i*batch_size:(c_i+1)*batch_size].to(device))
             similarities.append(torch.cat(curr_similarities, dim=1))
     return torch.cat(similarities, dim=0)
+
 
 def soft_wpmi(clip_feats, target_feats, top_k=100, a=10, lam=1, device='cuda',
                         min_prob=1e-7, p_start=0.998, p_end=0.97):
@@ -74,6 +77,7 @@ def soft_wpmi(clip_feats, target_feats, top_k=100, a=10, lam=1, device='cuda',
         mutual_info = prob_d_given_e - lam*prob_d
     return mutual_info
 
+
 def wpmi(clip_feats, target_feats, top_k=28, a=2, lam=0.6, device='cuda', min_prob=1e-7):
     
     with torch.no_grad():
@@ -97,6 +101,7 @@ def wpmi(clip_feats, target_feats, top_k=28, a=2, lam=0.6, device='cuda', min_pr
 
         mutual_info = prob_d_given_e - lam*prob_d
     return mutual_info
+
 
 def rank_reorder(clip_feats, target_feats, device="cuda", p=3, top_fraction=0.05, scale_p=0.5):
     """

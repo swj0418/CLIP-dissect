@@ -25,6 +25,11 @@ def get_target_model(target_name, device):
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = get_resnet_imagenet_preprocess()
+    elif target_name == 'custom_resnet50_random_split0':
+        target_model = models.resnet50(num_classes=500).to(device)
+        state_dict = torch.load('data/custom_resnet50_random_split0.ckpt')['state_dict']
+        print(state_dict)
+
     elif "vit_b" in target_name:
         target_name_cap = target_name.replace("vit_b", "ViT_B")
         weights = eval("models.{}_Weights.IMAGENET1K_V1".format(target_name_cap))
@@ -38,6 +43,7 @@ def get_target_model(target_name, device):
     
     target_model.eval()
     return target_model, preprocess
+
 
 def get_resnet_imagenet_preprocess():
     target_mean = [0.485, 0.456, 0.406]

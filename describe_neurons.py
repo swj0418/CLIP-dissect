@@ -11,7 +11,7 @@ import similarity
 
 parser = argparse.ArgumentParser(description='CLIP-Dissect')
 
-parser.add_argument("--clip_model", type=str, default="ViT-B/16", 
+parser.add_argument("--clip_model", type=str, default="ViT-L/14",
                     choices=['RN50', 'RN101', 'RN50x4', 'RN50x16', 'RN50x64', 'ViT-B/32', 'ViT-B/16', 'ViT-L/14'],
                    help="Which CLIP-model to use")
 parser.add_argument("--target_model", type=str, default="resnet50", 
@@ -20,7 +20,7 @@ parser.add_argument("--target_model", type=str, default="resnet50",
 parser.add_argument("--target_layers", type=str, default="conv1,layer1,layer2,layer3,layer4",
                     help="""Which layer neurons to describe. String list of layer names to describe, separated by comma(no spaces). 
                           Follows the naming scheme of the Pytorch module used""")
-parser.add_argument("--d_probe", type=str, default="broden", 
+parser.add_argument("--d_probe", type=str, default="imagenet_val",
                     choices = ["imagenet_broden", "cifar100_val", "imagenet_val", "broden", "imagenet_broden"])
 parser.add_argument("--concept_set", type=str, default="data/20k.txt", help="Path to txt file containing concept set")
 parser.add_argument("--batch_size", type=int, default=200, help="Batch size when running CLIP/target model")
@@ -39,10 +39,14 @@ if __name__ == '__main__':
     
     similarity_fn = eval("similarity.{}".format(args.similarity_fn))
     
-    utils.save_activations(clip_name = args.clip_model, target_name = args.target_model, 
-                           target_layers = args.target_layers, d_probe = args.d_probe, 
-                           concept_set = args.concept_set, batch_size = args.batch_size, 
-                           device = args.device, pool_mode=args.pool_mode, 
+    utils.save_activations(clip_name = args.clip_model,
+                           target_name = args.target_model,
+                           target_layers = args.target_layers,
+                           d_probe = args.d_probe,
+                           concept_set = args.concept_set,
+                           batch_size = args.batch_size,
+                           device = args.device,
+                           pool_mode=args.pool_mode,
                            save_dir = args.activation_dir)
     
     outputs = {"layer":[], "unit":[], "description":[], "similarity":[]}
