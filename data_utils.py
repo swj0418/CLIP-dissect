@@ -25,20 +25,22 @@ def get_target_model(target_name, device):
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = get_resnet_imagenet_preprocess()
-    elif target_name == 'custom_resnet50_random_split0':
+    elif target_name == 'resnet50_imagenet_random_split0':
         target_model = models.resnet50(num_classes=500).to(device)
-        state_dict = torch.load('data/custom_resnet50_random_split0.ckpt', map_location=device)['state_dict']
+        state_dict = torch.load(f'data/{target_name}.ckpt', map_location=device)['state_dict']
         new_state_dict = {}
         for key in state_dict:
             if key.startswith('model.'):
                 new_state_dict[key[6:]] = state_dict[key]
+        for k in new_state_dict.keys():
+            print(k)
 
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = models.ResNet50_Weights.DEFAULT.transforms()
-    elif target_name == 'custom_resnet50_random_split1':
+    elif target_name == 'resnet50_imagenet_random_split1':
         target_model = models.resnet50(num_classes=500).to(device)
-        state_dict = torch.load('data/custom_resnet50_random_split1.ckpt', map_location=device)['state_dict']
+        state_dict = torch.load(f'data/{target_name}.ckpt', map_location=device)['state_dict']
         new_state_dict = {}
         for key in state_dict:
             if key.startswith('model.'):

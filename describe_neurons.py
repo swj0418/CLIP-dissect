@@ -18,7 +18,7 @@ parser.add_argument("--clip_model", type=str, default="ViT-L/14",
 parser.add_argument("--target_model", type=str, default="resnet50", 
                    help=""""Which model to dissect, supported options are pretrained imagenet models from
                         torchvision and resnet18_places""")
-parser.add_argument("--target_layers", type=str, default="conv1,layer1,layer2,layer3,layer4",
+parser.add_argument("--target_layers", type=str, default="conv1,layer1[0],layer1[1],layer1[2],layer2[0],layer2[1],layer2[2],layer3[0],layer3[1],layer3[2],layer4[0],layer4[1],layer4[2]",
                     help="""Which layer neurons to describe. String list of layer names to describe, separated by comma(no spaces). 
                           Follows the naming scheme of the Pytorch module used""")
 parser.add_argument("--d_probe", type=str, default="imagenet_val",
