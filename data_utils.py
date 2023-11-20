@@ -1,10 +1,25 @@
 import os
 import torch
 import pandas as pd
+import dnnlib
+import gan_helper
 from torchvision import datasets, transforms, models
 
 DATASET_ROOTS = {"imagenet_val": "data/ImageNet_val/",
                 "broden": "data/broden1_224/images/"}
+
+
+class GANDataset(datasets.DatasetFolder):
+    def __init__(self):
+        super().__init__()
+        torch.manual_seed(1004)
+        self.dataset = torch.randn(size=(50000, 512))
+
+    def __getitem__(self, item):
+        return self.dataset[item]
+
+    def __len__(self):
+        return 50000
 
 
 def get_target_model(target_name, device):
@@ -32,8 +47,6 @@ def get_target_model(target_name, device):
         for key in state_dict:
             if key.startswith('model.'):
                 new_state_dict[key[6:]] = state_dict[key]
-        for k in new_state_dict.keys():
-            print(k)
 
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
@@ -49,6 +62,33 @@ def get_target_model(target_name, device):
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = models.ResNet50_Weights.DEFAULT.transforms()
+    elif target_name == 'resnet50_imagenet_artificial':
+        target_model = models.resnet50(num_classes=550).to(device)
+        state_dict = torch.load(f'data/{target_name}.ckpt', map_location=device)['state_dict']
+        new_state_dict = {}
+        for key in state_dict:
+            if key.startswith('model.'):
+                new_state_dict[key[6:]] = state_dict[key]
+
+        target_model.load_state_dict(new_state_dict)
+        target_model.eval()
+        preprocess = models.ResNet50_Weights.DEFAULT.transforms()
+    elif target_name == 'resnet50_imagenet_natural':
+        target_model = models.resnet50(num_classes=450).to(device)
+        state_dict = torch.load(f'data/{target_name}.ckpt', map_location=device)['state_dict']
+        new_state_dict = {}
+        for key in state_dict:
+            if key.startswith('model.'):
+                new_state_dict[key[6:]] = state_dict[key]
+
+        target_model.load_state_dict(new_state_dict)
+        target_model.eval()
+        preprocess = models.ResNet50_Weights.DEFAULT.transforms()
+    elif target_name == 'imagenet_256':
+        with dnnlib.util.open_url(f'data/{target_name}.ckpt') as f:
+            target_model = gan_helper.load_network_pkl(f)['G_ema']
+            target_model = target_model.eval().requires_grad_(False).to(device)
+        preprocess = None
     elif "vit_b" in target_name:
         target_name_cap = target_name.replace("vit_b", "ViT_B")
         weights = eval("models.{}_Weights.IMAGENET1K_V1".format(target_name_cap))
@@ -86,6 +126,8 @@ def get_data(dataset_name, preprocess=None):
     elif dataset_name == "imagenet_broden":
         data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
                                                      datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
+    elif dataset_name == 'gan_probe':
+        data = GANDataset()
         
     return data
 

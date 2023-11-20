@@ -146,6 +146,34 @@ def save_activations(clip_name, target_name, target_layers, d_probe,
     save_target_activations(target_model, data_t, target_save_name, target_layers,
                             batch_size, device, pool_mode)
     return
+
+
+def save_gan_activations(clip_name, target_name, target_layers, d_probe,
+                     concept_set, batch_size, device, pool_mode, save_dir):
+    clip_model, clip_preprocess = clip.load(clip_name, device=device)
+    target_model, target_preprocess = data_utils.get_target_model(target_name, device)
+    # setup data
+    data_c = data_utils.get_data(d_probe, clip_preprocess)
+    data_t = data_utils.get_data(d_probe, target_preprocess)
+
+    with open(concept_set, 'r') as f:
+        words = (f.read()).split('\n')
+    # ignore empty lines
+    words = [i for i in words if i != ""]
+
+    text = clip.tokenize(["{}".format(word) for word in words]).to(device)
+
+    save_names = get_save_names(clip_name=clip_name, target_name=target_name,
+                                target_layer='{}', d_probe=d_probe, concept_set=concept_set,
+                                pool_mode=pool_mode, save_dir=save_dir)
+    target_save_name, clip_save_name, text_save_name = save_names
+
+    # =======================
+
+    save_clip_text_features(clip_model, text, text_save_name, batch_size)
+    save_clip_image_features(clip_model, data_c, clip_save_name, batch_size, device)
+    save_target_activations(target_model, data_t, target_save_name, target_layers, 8, device, pool_mode)
+
     
 def get_similarity_from_activations(target_save_name, clip_save_name, text_save_name, similarity_fn, 
                                    return_target_feats=True, device="cuda"):
