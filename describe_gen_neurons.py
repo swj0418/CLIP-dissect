@@ -18,10 +18,10 @@ parser.add_argument("--clip_model", type=str, default="ViT-L/14",
 parser.add_argument("--target_model", type=str, default="imagenet256",
                    help=""""Which model to dissect, supported options are pretrained imagenet models from
                         torchvision and resnet18_places""")
-parser.add_argument("--target_layers", type=str, default="conv1,conv2",
+parser.add_argument("--target_layers", type=str, default="L0_36_1024,L1_36_1024",
                     help="""Which layer neurons to describe. String list of layer names to describe, separated by comma(no spaces). 
                           Follows the naming scheme of the Pytorch module used""")
-parser.add_argument("--d_probe", type=str, default="imagenet_val",
+parser.add_argument("--d_probe", type=str, default="gan_probe",
                     choices = ["imagenet_broden", "cifar100_val", "imagenet_val", "broden", "imagenet_broden", "gan_probe"])
 parser.add_argument("--concept_set", type=str, default="data/8k.txt", help="Path to txt file containing concept set")
 parser.add_argument("--batch_size", type=int, default=200, help="Batch size when running CLIP/target model")

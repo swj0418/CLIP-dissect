@@ -1,25 +1,41 @@
 import os
+import pickle
+
 import torch
 import pandas as pd
+import torchvision.datasets
+
 import dnnlib
-import gan_helper
+import legacy
 from torchvision import datasets, transforms, models
 
 DATASET_ROOTS = {"imagenet_val": "data/ImageNet_val/",
                 "broden": "data/broden1_224/images/"}
 
 
-class GANDataset(datasets.DatasetFolder):
-    def __init__(self):
-        super().__init__()
+class GANDataset(torchvision.datasets.ImageFolder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         torch.manual_seed(1004)
-        self.dataset = torch.randn(size=(50000, 512))
+        self.codes = torch.load(os.path.join(self.root, 'class_index.pt'), map_location='cpu')
 
-    def __getitem__(self, item):
-        return self.dataset[item]
+    def __getitem__(self, index: int):
+        """
+        Args:
+            index (int): Index
 
-    def __len__(self):
-        return 50000
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path, target = self.imgs[index]
+        sample = self.loader(path)
+        target = self.codes[index]
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return sample, target
 
 
 def get_target_model(target_name, device):
@@ -84,10 +100,12 @@ def get_target_model(target_name, device):
         target_model.load_state_dict(new_state_dict)
         target_model.eval()
         preprocess = models.ResNet50_Weights.DEFAULT.transforms()
-    elif target_name == 'imagenet_256':
-        with dnnlib.util.open_url(f'data/{target_name}.ckpt') as f:
-            target_model = gan_helper.load_network_pkl(f)['G_ema']
+    elif target_name == 'imagenet256':
+        with dnnlib.util.open_url(f'data/{target_name}.pkl') as f:
+            target_model = pickle.load(f)['G_ema']
             target_model = target_model.eval().requires_grad_(False).to(device)
+
+        print(target_model)
         preprocess = None
     elif "vit_b" in target_name:
         target_name_cap = target_name.replace("vit_b", "ViT_B")

@@ -174,7 +174,7 @@ def save_gan_activations(clip_name, target_name, target_layers, d_probe,
     save_clip_image_features(clip_model, data_c, clip_save_name, batch_size, device)
     save_target_activations(target_model, data_t, target_save_name, target_layers, 8, device, pool_mode)
 
-    
+
 def get_similarity_from_activations(target_save_name, clip_save_name, text_save_name, similarity_fn, 
                                    return_target_feats=True, device="cuda"):
     
