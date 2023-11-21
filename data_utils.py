@@ -145,7 +145,7 @@ def get_data(dataset_name, preprocess=None):
         data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
                                                      datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
     elif dataset_name == 'gan_probe':
-        data = GANDataset()
+        data = GANDataset(root=f'data/gan_val', transform=preprocess)
         
     return data
 

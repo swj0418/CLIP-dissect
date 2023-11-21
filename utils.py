@@ -75,6 +75,40 @@ def save_target_activations(target_model, dataset, save_name, target_layers = ["
     return
 
 
+def save_gan_target_activations(target_model, dataset, save_name, target_layers=["layer4"], batch_size=1000,
+                            device="cuda", pool_mode='avg'):
+    """
+    save_name: save_file path, should include {} which will be formatted by layer names
+    """
+    _make_save_dir(save_name)
+    save_names = {}
+    for target_layer in target_layers:
+        save_names[target_layer] = save_name.format(target_layer)
+
+    if _all_saved(save_names):
+        return
+
+    all_features = {target_layer: [] for target_layer in target_layers}
+
+    hooks = {}
+    for target_layer in target_layers:
+        command = "target_model.{}.register_forward_hook(get_activation(all_features[target_layer], pool_mode))".format(
+            target_layer)
+        hooks[target_layer] = eval(command)
+
+    with torch.no_grad():
+        for _, codes in tqdm(DataLoader(dataset, batch_size, num_workers=8, pin_memory=True)):
+            _ = target_model(codes.to(device))
+
+    for target_layer in target_layers:
+        torch.save(torch.cat(all_features[target_layer]), save_names[target_layer])
+        hooks[target_layer].remove()
+    # free memory
+    del all_features
+    torch.cuda.empty_cache()
+    return
+
+
 def save_clip_image_features(model, dataset, save_name, batch_size=1000 , device = "cuda"):
     _make_save_dir(save_name)
     all_features = []
@@ -172,7 +206,7 @@ def save_gan_activations(clip_name, target_name, target_layers, d_probe,
 
     save_clip_text_features(clip_model, text, text_save_name, batch_size)
     save_clip_image_features(clip_model, data_c, clip_save_name, batch_size, device)
-    save_target_activations(target_model, data_t, target_save_name, target_layers, 8, device, pool_mode)
+    save_gan_target_activations(target_model, data_t, target_save_name, target_layers, 8, device, pool_mode)
 
 
 def get_similarity_from_activations(target_save_name, clip_save_name, text_save_name, similarity_fn, 
