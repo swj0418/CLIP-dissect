@@ -16,8 +16,7 @@ DATASET_ROOTS = {"imagenet_val": "data/ImageNet_val/",
 class GANDataset(torchvision.datasets.ImageFolder):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        torch.manual_seed(1004)
-        self.codes = torch.load(os.path.join(self.root, 'class_index.pt'), map_location='cpu')
+        self.codes = torch.load(os.path.join(self.root, 'code_index.pt'), map_location='cpu')
 
     def __getitem__(self, index: int):
         """
@@ -27,7 +26,7 @@ class GANDataset(torchvision.datasets.ImageFolder):
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        path, target = self.imgs[index]
+        path, target = self.samples[index]
         sample = self.loader(path)
         target = self.codes[index]
         if self.transform is not None:
@@ -106,7 +105,7 @@ def get_target_model(target_name, device):
             target_model = target_model.eval().requires_grad_(False).to(device)
 
         print(target_model)
-        preprocess = None
+        preprocess = models.ResNet50_Weights.DEFAULT.transforms()
     elif "vit_b" in target_name:
         target_name_cap = target_name.replace("vit_b", "ViT_B")
         weights = eval("models.{}_Weights.IMAGENET1K_V1".format(target_name_cap))

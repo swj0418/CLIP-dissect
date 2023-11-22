@@ -92,13 +92,13 @@ def save_gan_target_activations(target_model, dataset, save_name, target_layers=
 
     hooks = {}
     for target_layer in target_layers:
-        command = "target_model.{}.register_forward_hook(get_activation(all_features[target_layer], pool_mode))".format(
+        command = "target_model.synthesis.{}.register_forward_hook(get_activation(all_features[target_layer], pool_mode))".format(
             target_layer)
         hooks[target_layer] = eval(command)
 
     with torch.no_grad():
         for _, codes in tqdm(DataLoader(dataset, batch_size, num_workers=8, pin_memory=True)):
-            _ = target_model(codes.to(device))
+            _ = target_model(codes.to(device), c=None)
 
     for target_layer in target_layers:
         torch.save(torch.cat(all_features[target_layer]), save_names[target_layer])
